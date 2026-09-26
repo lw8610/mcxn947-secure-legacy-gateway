@@ -1,0 +1,13 @@
+Secure Legacy Gateway
+Copyright 2026 Secure Legacy Gateway contributors
+
+This product includes material developed by the Zephyr Project and its
+contributors, available under the Apache License, Version 2.0.
+
+src/ca_certificate.h is derived from a Zephyr sample and retains its original
+Copyright (c) 2018 Nordic Semiconductor ASA notice and Apache-2.0 license.
+
+Third-party dependencies and trust anchors are documented in
+THIRD_PARTY_NOTICES.md. NXP ELS/PKC software is not included in this
+repository.
+

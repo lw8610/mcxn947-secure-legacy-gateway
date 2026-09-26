@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 Secure Legacy Gateway contributors
+# SPDX-License-Identifier: Apache-2.0
+
+# Zephyr/CMake output (do not publish firmware binaries from this repository)
+build*/
+cmake-build-*/
+*.bin
+*.elf
+*.hex
+*.map
+*.o
+*.a
+
+# Local logs, backups and editor state
+serial-logs/
+backups/
+*.log
+.DS_Store
+.vscode/
+*.code-workspace
+
+# Development snapshots retained locally
+CMakeLists_*_working.txt
+prj_*_working.conf
+prj_before_*.conf
+src/main_*_working.c
+src/main_before_*.c
+src/*.pem
+

@@ -1,0 +1,12 @@
+/* SPDX-FileCopyrightText: 2026 Secure Legacy Gateway contributors */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/*
+ * Derive a stable Ethernet address from the MCX device UUID.  The Zephyr
+ * binding documents this as suitable for development and demos; a commercial
+ * product should use MAC addresses assigned by its manufacturer.
+ */
+&enet_mac {
+	/delete-property/ zephyr,random-mac-address;
+	nxp,unique-mac;
+};
