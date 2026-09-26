@@ -1,0 +1,100 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index af167c49..780e82c5 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -78,7 +78,36 @@ if(CONFIG_SOC_SERIES_RW6XX)
+     )
+ endif()
+ 
+-if(CONFIG_EXPORT_MCUX_ELS_PKC_TARGETS)
++# Zephyr integration for MCXN devices. The upstream NXP component already
++# contains the MCXN platform implementation, but its Zephyr glue historically
++# only selected RW61x. Use Zephyr's MCUX SDK-NG device headers and compile the
++# matching ELS/PKC platform layer for MCXN947.
++if(CONFIG_SOC_FAMILY_MCXN)
++    # Keep Zephyr's SDK-NG device headers ahead of the compatibility headers
++    # bundled with els_pkc.  Both trees contain MCXN947_cm33_core0.h, but only
++    # the SDK-NG copy matches the peripheral definitions used by Zephyr.
++    target_include_directories(McuxElsPkc BEFORE
++        PRIVATE
++            ${ZEPHYR_HAL_NXP_MODULE_DIR}/mcux/mcux-sdk-ng/drivers/common
++        PUBLIC
++            ${ZEPHYR_HAL_NXP_MODULE_DIR}/mcux/mcux-sdk-ng/devices/MCX/MCXN
++            ${ZEPHYR_HAL_NXP_MODULE_DIR}/mcux/mcux-sdk-ng/devices/MCX/MCXN/MCXN947
++            ${ZEPHYR_HAL_NXP_MODULE_DIR}/mcux/mcux-sdk-ng/devices/MCX/MCXN/MCXN947/drivers
++            ${CMAKE_CURRENT_SOURCE_DIR}/src/platforms/mcxn
++            ${CMAKE_CURRENT_SOURCE_DIR}/src/platforms/mcxn/inc
++            ${CMAKE_CURRENT_SOURCE_DIR}/includes/platform/mcxn
++    )
++
++    target_sources(McuxElsPkc
++        PRIVATE
++            ${CMAKE_CURRENT_SOURCE_DIR}/src/platforms/mcxn/mcux_els.c
++            ${CMAKE_CURRENT_SOURCE_DIR}/src/platforms/mcxn/mcux_pkc.c
++    )
++
++    target_link_libraries(McuxElsPkc PUBLIC zephyr_interface)
++endif()
++
++if(CONFIG_EXPORT_MCUX_ELS_PKC_TARGETS AND NOT DEFINED ZEPHYR_BASE)
+ export(TARGETS McuxElsPkc
+     FILE "${CMAKE_CURRENT_BINARY_DIR}/McuxElsPkcTargets.cmake"
+     NAMESPACE McuxElsPkc::
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 4c917a51..2470535a 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -108,6 +108,7 @@ target_sources(
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_EdDSA_Internal_SetupEnvironment.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_EdDSA_Internal_SignatureMechanisms.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_EdDSA_VerifySignature.c
++        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_ECDSA_Internal_BlindedSecretKeyGen.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_Internal_BlindedScalarMult.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_Internal_Convert_FUP.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_Internal_GenerateMultiplicativeBlinding.c
+@@ -160,14 +161,15 @@ target_sources(
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_WeierECC_Internal_BlindedSecretKeyGen.c 
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_WeierECC_Internal_BlindedSecretKeyGen_FUP.c 
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_WeierECC_Internal_GenerateKeyPair.c 
+-        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_WeierECC_Internal_KeyAgreement_ECDH.c 
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEcc/src/mcuxClEcc_WeierECC_Internal_SetupEnvironment.c 
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_Aead.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_Cipher.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_Cmac.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_Common.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_Ecc.c
+-        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_GlitchDetector.c
++        # MCXN947 exposes glitch detection through SYSCON rather than the
++        # legacy ELS_GDET_EVTCNT registers.  The PSA crypto driver does not
++        # use these optional legacy entry points.
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_Hash.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_Hmac.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClEls/src/mcuxClEls_Kdf.c
+@@ -233,6 +235,7 @@ target_sources(
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClRsa/src/mcuxClRsa_GenerateProbablePrime.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClRsa/src/mcuxClRsa_getMillerRabinTestIterations.c 
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClRsa/src/mcuxClRsa_KeyGeneration_Crt.c
++        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClRsa/src/mcuxClRsa_KeyGeneration_Helper.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClRsa/src/mcuxClRsa_KeyGeneration_Crt_FUP.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClRsa/src/mcuxClRsa_KeyGeneration_Plain.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClRsa/src/mcuxClRsa_Mgf1.c
+@@ -261,14 +264,15 @@ target_sources(
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClRsa/src/mcuxClRsa_VerifyE.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClSession/src/mcuxClSession.c
+ 
+-        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClTrng/src/mcuxClTrng_SA_TRNG.c
++        # MCXN947 uses the ELS-backed TRNG adaptation.  The SA_TRNG source
++        # targets a different legacy register layout.
++        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxClTrng/src/mcuxClTrng_ELS.c
+ 
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxCsslMemory/src/mcuxCsslMemory_Clear.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxCsslMemory/src/mcuxCsslMemory_Compare.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxCsslMemory/src/mcuxCsslMemory_Copy.c
+-        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxCsslMemory/src/mcuxCsslMemory_Internal_SecureCompare_Stub.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxCsslMemory/src/mcuxCsslMemory_Set.c
+-        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxCsslParamIntegrity/src/mcuxCsslParamIntegrity.c
++        ${CMAKE_CURRENT_SOURCE_DIR}/comps/mcuxCsslParamIntegrity/src/mcuxCsslParamIntegrity32.c
+ 
+         ${CMAKE_CURRENT_SOURCE_DIR}/src/mcuxCl_clns.c
+ )
+

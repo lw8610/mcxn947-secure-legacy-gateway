@@ -1,0 +1,45 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index acf9472..e935052 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -480,7 +480,7 @@ endif()
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/include/transparent
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/oracle
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/oracle/inc
+-		${CMAKE_CURRENT_LIST_DIR}/els_pkc/oracle/platforms/rw61x
++		${CMAKE_CURRENT_LIST_DIR}/els_pkc/oracle/platforms/$<IF:$<BOOL:${CONFIG_SOC_FAMILY_MCXN}>,mcxn,rw61x>
+ 		${CMAKE_CURRENT_LIST_DIR}/osal
+ 		${CMAKE_CURRENT_LIST_DIR}/osal/zephyr
+ 		#include the psa-driver inlcude path from clib
+@@ -498,8 +498,8 @@ if(CONFIG_BUILD_WITH_TFM)
+ 		${NXP_MODULE_CRYPTO_PATH}/mbedtls-3.6/include/psa
+ 		# for psa driver wrapper
+ 		${NXP_MODULE_CRYPTO_PATH}/mbedtls-3.6/library
+-		# cmsis required to build els_pkc
+-		${NXP_MODULE_ELS_PKC_PATH}/src/platforms/rw61x/cmsis_cortex_m_5_5_1/inc
++		# CMSIS is supplied by Zephyr on MCXN. RW61x keeps the component copy.
++		$<$<NOT:$<BOOL:${CONFIG_SOC_FAMILY_MCXN}>>:${NXP_MODULE_ELS_PKC_PATH}/src/platforms/rw61x/cmsis_cortex_m_5_5_1/inc>
+ 	)
+ else()
+ 	target_include_directories(McuxPsaCryptoDriverElsPkc
+@@ -524,6 +524,7 @@ endif()
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/oracle/src/mcuxClPsaDriver_Oracle.c
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/oracle/src/mcuxClPsaDriver_Oracle_ElsUtils.c
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/oracle/src/mcuxClPsaDriver_Oracle_Utils.c
++		$<$<BOOL:${CONFIG_SOC_FAMILY_MCXN}>:${CMAKE_CURRENT_LIST_DIR}/els_pkc/oracle/platforms/mcxn/mcuxClPsaDriver_Oracle_KeyRecipes_Utils.c>
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/src/common/mcux_psa_els_pkc_common_init.c
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/src/common/mcux_psa_els_pkc_entropy.c
+ 		${CMAKE_CURRENT_LIST_DIR}/els_pkc/src/opaque/mcux_psa_els_pkc_opaque_aead.c
+diff --git a/els_pkc/src/common/mcux_psa_els_pkc_entropy.c b/els_pkc/src/common/mcux_psa_els_pkc_entropy.c
+index c6ab875..037d766 100644
+--- a/els_pkc/src/common/mcux_psa_els_pkc_entropy.c
++++ b/els_pkc/src/common/mcux_psa_els_pkc_entropy.c
+@@ -22,6 +22,7 @@
+ #endif
+ 
+ #include "mcux_psa_els_pkc_entropy.h"
++#include "mcuxClConfig.h"
+ 
+ /* Standalone TRNG can be used if its configured to be used via cmake,
+    otherwise Use 256bit RNG3 random mode if available, or else fallback to low entropy PRNG(default enabled) */
+

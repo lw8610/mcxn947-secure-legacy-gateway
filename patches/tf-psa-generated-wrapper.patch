@@ -1,0 +1,51 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 06a2fc24b..ffadcc96e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -69,13 +69,15 @@ set(version_number_files
+         doxygen/input/doc_mainpage.h
+         doxygen/tfpsacrypto.doxyfile)
+ foreach(file ${version_number_files})
++    get_filename_component(file_directory ${file} DIRECTORY)
++    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${file_directory})
+     configure_file(${file}.in
+-                   ${PROJECT_SOURCE_DIR}/${file})
++                   ${CMAKE_CURRENT_BINARY_DIR}/${file})
+ endforeach(file)
+ 
+ ADD_CUSTOM_TARGET(${TF_PSA_CRYPTO_TARGET_PREFIX}tfpsacrypto-apidoc
+     COMMAND doxygen tfpsacrypto.doxyfile
+-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doxygen)
++    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen)
+ 
+ option(ENABLE_PROGRAMS "Build TF-PSA-Crypto programs." ON)
+ 
+diff --git a/core/CMakeLists.txt b/core/CMakeLists.txt
+index bc3aaddcb..77be4aad2 100644
+--- a/core/CMakeLists.txt
++++ b/core/CMakeLists.txt
+@@ -11,7 +11,12 @@ list(FIND src_crypto
+ if(NOT _idx EQUAL -1)
+     list(REMOVE_AT src_crypto ${_idx})
+ endif()
+-list(APPEND src_crypto psa_crypto_driver_wrappers_no_static.c)
++if(DEFINED NXP_PSA_DRIVER_GENERATED_FILES_DIR)
++    list(APPEND src_crypto
++        ${NXP_PSA_DRIVER_GENERATED_FILES_DIR}/psa_crypto_driver_wrappers_no_static.c)
++else()
++    list(APPEND src_crypto psa_crypto_driver_wrappers_no_static.c)
++endif()
+ 
+ if(GEN_FILES)
+     add_custom_command(
+@@ -158,6 +163,10 @@ foreach(target IN LISTS target_libraries)
+         PRIVATE ${TF_PSA_CRYPTO_PRIVATE_INCLUDE_DIRS}
+                 # Needed to include psa_crypto_driver_wrappers.h
+                 ${CMAKE_CURRENT_BINARY_DIR})
++    if(DEFINED NXP_PSA_DRIVER_GENERATED_FILES_DIR)
++        target_include_directories(${target} BEFORE PRIVATE
++            ${NXP_PSA_DRIVER_GENERATED_FILES_DIR})
++    endif()
+     foreach(driver_target ${TF_PSA_CRYPTO_DRIVER_TARGETS})
+         get_target_property(public_includes ${driver_target} INTERFACE_INCLUDE_DIRECTORIES)
+         foreach(dir IN LISTS public_includes)
